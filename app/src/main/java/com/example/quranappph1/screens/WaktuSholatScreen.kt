@@ -241,7 +241,7 @@ fun WaktuSholat() {
                                     val locationName = geoCoder.getFromLocation(
                                         latitude, longtitude, 1
                                     )?.get(0)
-                                    val kota = locationName?.locality
+                                    val kota = locationName?.subAdminArea
                                     val namaNegara = locationName?.countryName
                                     Text(
                                         text = "$kota, $namaNegara",
