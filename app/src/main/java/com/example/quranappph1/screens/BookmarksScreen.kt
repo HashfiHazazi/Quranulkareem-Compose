@@ -6,11 +6,13 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Arrangement.Center
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -43,6 +45,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -51,6 +54,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -78,6 +82,11 @@ fun BookMarksScreen(
     var alertDialogDeleteAll by remember {
         mutableStateOf(false)
     }
+
+    var isBookmarksEmpty by remember {
+        mutableStateOf(false)
+    }
+
     var lazyColumnState = rememberLazyListState()
     Scaffold(
         topBar = {
@@ -116,132 +125,163 @@ fun BookMarksScreen(
                     }
                 },
                 actions = {
-                    TextButton(onClick = {
-                        alertDialogDeleteAll = true
-                    }) {
-                        Text(text = "Delete All")
-                    }
+                    if (isBookmarksEmpty) {
 
-                    if (alertDialogDeleteAll) {
-                        AlertDialog(
-                            onDismissRequest = {
-                                alertDialogDeleteAll = false
-                            },
-                            title = {
-                                Text(text = "Hapus semua bookmarks?")
-                            },
-                            text = {
-                                Text("Dengan menekan tombol 'Ya' anda akan menghapus semua bookmarks yang telah anda simpan!")
-                            },
-                            confirmButton = {
-                                Button(
-                                    onClick = {
-                                        scope.launch{
-                                            bookmarkDao.deleteAllFromBookmark()
-                                        }
-                                        alertDialogDeleteAll = false
-                                    }) {
-                                    Text("Ya")
-                                }
-                            },
-                            dismissButton = {
-                                Button(
-                                    onClick = {
-                                        alertDialogDeleteAll = false
-                                    }) {
-                                    Text("Tidak")
-                                }
-                            }
-                        )
-                    }
+                    } else {
+                        TextButton(onClick = {
+                            alertDialogDeleteAll = true
+                        }) {
+                            Text(text = "Delete All")
+                        }
 
+                        if (alertDialogDeleteAll) {
+                            AlertDialog(
+                                onDismissRequest = {
+                                    alertDialogDeleteAll = false
+                                },
+                                title = {
+                                    Text(text = "Hapus semua bookmarks?")
+                                },
+                                text = {
+                                    Text("Dengan menekan tombol 'Ya' anda akan menghapus semua bookmarks yang telah anda simpan!")
+                                },
+                                confirmButton = {
+                                    Button(
+                                        onClick = {
+                                            scope.launch {
+                                                bookmarkDao.deleteAllFromBookmark()
+                                            }
+                                            alertDialogDeleteAll = false
+                                        }) {
+                                        Text("Ya")
+                                    }
+                                },
+                                dismissButton = {
+                                    Button(
+                                        onClick = {
+                                            alertDialogDeleteAll = false
+                                        }) {
+                                        Text("Tidak")
+                                    }
+                                }
+                            )
+                        }
+                    }
                 }
             )
         }
     ) {
         val padding = it
         bookmarkDao.getAllBookmarks().collectAsState(initial = emptyList()).let { state ->
-            LazyColumn(
-                modifier = Modifier.padding(paddingValues = padding),
-                contentPadding = PaddingValues(16.dp),
-                state = lazyColumnState
-            ) {
-                itemsIndexed(state.value) { index, itemBookmarks ->
-                    val formattedTime = formatInstant(itemBookmarks.createdAt)
-                    Spacer(modifier = Modifier.size(16.dp))
-                    Card(
-                        onClick = {
-                                  goToRead.invoke(itemBookmarks.surahNumber, null, null, itemBookmarks.ayahNumber)
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
-                    ) {
-                        Row(
-                            Modifier
-                                .fillMaxSize()
-                                .padding(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                Modifier
-                                    .size(48.dp)
-                                    .padding(end = 8.dp)
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.border_num),
-                                    contentDescription = "Border Num Surah",
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.fillMaxSize()
+            isBookmarksEmpty = state.value.isEmpty()
+            if (isBookmarksEmpty) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp),
+                    horizontalAlignment = CenterHorizontally,
+                    verticalArrangement = Center
+                ) {
+                    Text(
+                        modifier = Modifier.fillMaxWidth(),
+                        text = "Tidak ada bookmarks ayat yang tersimpan",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontFamily = FontFamily(
+                            Font(R.font.monda_regular)
+                        ),
+                        color = MaterialTheme.colorScheme.onBackground,
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+            } else {
+                LazyColumn(
+                    modifier = Modifier.padding(paddingValues = padding),
+                    contentPadding = PaddingValues(16.dp),
+                    state = lazyColumnState
+                ) {
+                    itemsIndexed(state.value) { index, itemBookmarks ->
+                        val formattedTime = formatInstant(itemBookmarks.createdAt)
+                        Spacer(modifier = Modifier.size(16.dp))
+                        Card(
+                            onClick = {
+                                goToRead.invoke(
+                                    itemBookmarks.surahNumber,
+                                    null,
+                                    null,
+                                    itemBookmarks.ayahNumber
                                 )
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxSize(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                        ) {
+                            Row(
+                                Modifier
+                                    .fillMaxSize()
+                                    .padding(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    Modifier
+                                        .size(48.dp)
+                                        .padding(end = 8.dp)
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.border_num),
+                                        contentDescription = "Border Num Surah",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxSize(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        Text(
+                                            text = "${index + 1}",
+                                            fontFamily = FontFamily(Font(R.font.monda_regular)),
+                                            fontWeight = FontWeight.Medium,
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                                Column(
+                                    modifier = Modifier.weight(1f)
                                 ) {
                                     Text(
-                                        text = "${index+1}",
-                                        fontFamily = FontFamily(Font(R.font.monda_regular)),
-                                        fontWeight = FontWeight.Medium,
-                                        fontSize = 12.sp,
-                                        color = MaterialTheme.colorScheme.primary
+                                        text = "${itemBookmarks.surahName} : ${itemBookmarks.ayahNumber}",
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onBackground
+                                    )
+                                    Text(
+                                        text = "$formattedTime",
+                                        fontSize = 14.sp
                                     )
                                 }
-                            }
-                            Column(
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(
-                                    text = "${itemBookmarks.surahName} : ${itemBookmarks.ayahNumber}",
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onBackground
-                                )
-                                Text(
-                                    text = "$formattedTime",
-                                    fontSize = 14.sp
-                                )
-                            }
-                            IconButton(onClick = {
-                                scope.launch {
-                                    bookmarkDao.deleteBookmark(
-                                        bookmark = itemBookmarks
+                                IconButton(onClick = {
+                                    scope.launch {
+                                        bookmarkDao.deleteBookmark(
+                                            bookmark = itemBookmarks
+                                        )
+                                    }
+                                }) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.round_close_24),
+                                        contentDescription = null,
+                                        tint = Color.Red
                                     )
                                 }
-                            }) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.round_close_24),
-                                    contentDescription = null,
-                                    tint = Color.Red
-                                )
                             }
                         }
                     }
-                }
 
+                }
             }
         }
 

@@ -354,43 +354,6 @@ fun WaktuSholat() {
                 }
             }
             item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                        .padding(horizontal = 16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    Row(
-                        Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(32.dp)
-                        )
-                        Spacer(modifier = Modifier.size(8.dp))
-                        Text(
-                            text = "Notifikasi Adzan",
-                            fontFamily = FontFamily(Font(R.font.monda_regular)),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp,
-                            modifier = Modifier.weight(1f),
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                        Switch(
-                            modifier = Modifier.padding(start = 16.dp),
-                            checked = switchToggle,
-                            onCheckedChange = { switchToggle_ ->
-                                switchToggle = switchToggle_
-                            }
-                        )
-                    }
-                }
                 Text(
                     modifier = Modifier.padding(16.dp),
                     text = """
