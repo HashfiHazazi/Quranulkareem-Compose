@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowLeft
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -47,6 +48,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
@@ -135,7 +137,16 @@ fun SearchScreen(
                 containerColor = MaterialTheme.colorScheme.onSecondary,
             ),
             tonalElevation = SearchBarDefaults.Elevation,
-            shape = RoundedCornerShape(0.dp)
+            shape = RoundedCornerShape(0.dp),
+            placeholder = {
+                Row (
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ){
+                    Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = Color.Gray)
+                    Text(text = "Cari surah & terjemah ayat di sini...", fontFamily = FontFamily(Font(R.font.monda_regular)), color = Color.Gray, fontSize = 14.sp)
+                }
+            }
         ) {
             LazyColumn {
                 items(searchAyahResult) { ayah ->

@@ -7,9 +7,13 @@
 
 package com.example.quranappph1.screens
 
+import android.annotation.SuppressLint
 import android.location.Geocoder
 import android.location.Location
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -42,6 +46,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -59,6 +64,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -73,17 +79,25 @@ import com.example.quranappph1.service.location.LocationServiceCondition
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.android.gms.location.LocationServices
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
-@Preview
-@Composable
-fun preview() {
-    WaktuSholat()
-}
-
+@RequiresApi(Build.VERSION_CODES.O)
+@SuppressLint("CoroutineCreationDuringComposition")
 @Composable
 fun WaktuSholat() {
+    val dateFlow = getTime().collectAsState(initial = "")
+
     val api = ApiInterface.createApi()
 
     val prayerTime = remember {
@@ -123,55 +137,7 @@ fun WaktuSholat() {
         locationState.emit(locationTracker.getCurrentLocation())
     }
 
-
-    var switchToggle by remember {
-        mutableStateOf(false)
-    }
-
     val gabunganListWaktuSholat = mutableListOf<ItemWaktuSholat>()
-
-    val listGambarTanggal = listOf(
-        R.drawable.isra_miraj,
-        R.drawable.nisfu_syaban,
-        R.drawable.lailatul_qadr,
-        R.drawable.idul_fitr,
-        R.drawable.idul_adha,
-        R.drawable.muharram,
-        R.drawable.asyura,
-        R.drawable.rabiulawal
-    )
-
-    val listNamaHari = listOf(
-        "Isra Mi'raj",
-        "Nisyfu Sya’ban",
-        "Lailatul Qadr",
-        "Idul Fitri",
-        "Idul Adha",
-        "Muharram",
-        "Ashyura",
-        "12 Rabiul Awwal"
-    )
-    val listTanggalHari = listOf(
-        "Senin, 27 Rajab 1444 H",
-        "Rabu, 15 Sya’ban 1444 H",
-        "Selasa, 27 Ramadhan 1444 H ",
-        "Jum’at, 1 Syawal 1444 H",
-        "Rabu, 10 Dzulhijjah 1444 H",
-        "Rabu, 1 Muharram 1445 H",
-        "Kamis, 9 Muharram 1445 H",
-        "Rabu, 12 Rabi’ul Awwal 1445 H"
-    )
-    val gabunganListKalender = mutableListOf<ItemKalenderIslam>()
-    for (i in listNamaHari.indices) {
-        val dataKalender = ItemKalenderIslam(
-            listNamaHari[i],
-            listTanggalHari[i],
-            listGambarTanggal[i]
-        )
-        gabunganListKalender.add(dataKalender)
-    }
-
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -201,115 +167,134 @@ fun WaktuSholat() {
             modifier = Modifier.padding(padding)
         ) {
             item {
-                Row(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.baseline_location_on_24),
-                        contentDescription = null
-                    )
-                    Spacer(modifier = Modifier.size(8.dp))
-                    locationState.asStateFlow().collectAsState().let { state ->
-                        when (val locationCondition = state.value) {
-                            is LocationServiceCondition.Error -> {
-                                Text(
-                                    text = "-",
-                                    fontSize = 18.sp,
-                                    color = MaterialTheme.colorScheme.onBackground
-                                )
-                            }
-
-                            is LocationServiceCondition.MissingPermission -> {
-                                Text(
-                                    text = "-",
-                                    fontSize = 18.sp,
-                                    color = MaterialTheme.colorScheme.onBackground
-                                )
-                            }
-
-                            is LocationServiceCondition.NoGps -> {
-                                Text(
-                                    text = "Gps Belum Aktif!",
-                                    fontSize = 18.sp,
-                                    color = MaterialTheme.colorScheme.onBackground
-                                )
-                            }
-
-                            is LocationServiceCondition.Success -> {
-                                val location = locationCondition.location
-                                val latitude = location?.latitude
-                                val longtitude = location?.longitude
-                                if (latitude != null && longtitude != null) {
-                                    val locationName = geoCoder.getFromLocation(
-                                        latitude, longtitude, 1
-                                    )?.get(0)
-                                    val kota = locationName?.subAdminArea
-                                    val namaNegara = locationName?.countryName
+                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.baseline_location_on_24),
+                            contentDescription = null
+                        )
+                        locationState.asStateFlow().collectAsState().let { state ->
+                            when (val locationCondition = state.value) {
+                                is LocationServiceCondition.Error -> {
                                     Text(
-                                        text = "$kota, $namaNegara",
+                                        text = "-",
                                         fontSize = 18.sp,
                                         color = MaterialTheme.colorScheme.onBackground
                                     )
                                 }
-                                val listTextSholat = listOf(
-                                    "Sholat Shubuh",
-                                    "Sholat Dzuhur",
-                                    "Sholat Ashar",
-                                    "Sholat Maghrib",
-                                    "Sholat Isya"
-                                )
 
-
-                                val listBackgroundWaktu = listOf(
-                                    R.drawable.background_shubuh,
-                                    R.drawable.background_dzuhur,
-                                    R.drawable.background_ashar,
-                                    R.drawable.background_maghrib,
-                                    R.drawable.background_isya
-                                )
-
-                                LaunchedEffect(key1 = true) {
-                                    val result = api.getPrayerTime(
-                                        latitude = latitude.toString(),
-                                        longitude = longtitude.toString()
-                                    )
-                                    prayerTime.clear()
-                                    prayerTime.addAll(result.times)
-                                }
-
-                                if (prayerTime.isNotEmpty()) {
-                                    gabunganListWaktuSholat.clear()
-                                    for (i in listTextSholat.indices) {
-                                        val dataJadwalSholat = ItemWaktuSholat(
-                                            listTextSholat[i],
-                                            listOf(
-                                                prayerTime[0]?.fajr,
-                                                prayerTime[0]?.dhuhr,
-                                                prayerTime[0]?.asr,
-                                                prayerTime[0]?.maghrib,
-                                                prayerTime[0]?.isha
-                                            )[i].toString(),
-                                            listBackgroundWaktu[i]
-                                        )
-                                        gabunganListWaktuSholat.add(dataJadwalSholat)
-                                    }
-                                }
-                            }
-
-                            null -> {
-                                Box(
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
+                                is LocationServiceCondition.MissingPermission -> {
                                     Text(
-                                        text = "Mengambil lokasi...",
+                                        text = "-",
+                                        fontSize = 18.sp,
                                         color = MaterialTheme.colorScheme.onBackground
                                     )
                                 }
+
+                                is LocationServiceCondition.NoGps -> {
+                                    Text(
+                                        text = "Gps Belum Aktif!",
+                                        fontSize = 18.sp,
+                                        color = MaterialTheme.colorScheme.onBackground
+                                    )
+                                }
+
+                                is LocationServiceCondition.Success -> {
+                                    val location = locationCondition.location
+                                    val latitude = location?.latitude
+                                    val longtitude = location?.longitude
+                                    if (latitude != null && longtitude != null) {
+                                        val locationName = geoCoder.getFromLocation(
+                                            latitude, longtitude, 1
+                                        )?.get(0)
+                                        val kota = locationName?.subAdminArea
+                                        val namaNegara = locationName?.countryName
+                                        Text(
+                                            text = "$kota, $namaNegara",
+                                            fontSize = 18.sp,
+                                            color = MaterialTheme.colorScheme.onBackground
+                                        )
+                                    }
+                                    val listTextSholat = listOf(
+                                        "Sholat Shubuh",
+                                        "Sholat Dzuhur",
+                                        "Sholat Ashar",
+                                        "Sholat Maghrib",
+                                        "Sholat Isya"
+                                    )
+                                    val listBackgroundWaktu = listOf(
+                                        R.drawable.background_shubuh,
+                                        R.drawable.background_dzuhur,
+                                        R.drawable.background_ashar,
+                                        R.drawable.background_maghrib,
+                                        R.drawable.background_isya
+                                    )
+
+                                    LaunchedEffect(key1 = true) {
+                                        val result = api.getPrayerTime(
+                                            latitude = latitude.toString(),
+                                            longitude = longtitude.toString()
+                                        )
+                                        prayerTime.clear()
+                                        prayerTime.addAll(result.times)
+                                    }
+
+                                    if (prayerTime.isNotEmpty()) {
+                                        gabunganListWaktuSholat.clear()
+                                        for (i in listTextSholat.indices) {
+                                            val dataJadwalSholat = ItemWaktuSholat(
+                                                listTextSholat[i],
+                                                listOf(
+                                                    prayerTime[0]?.fajr,
+                                                    prayerTime[0]?.dhuhr,
+                                                    prayerTime[0]?.asr,
+                                                    prayerTime[0]?.maghrib,
+                                                    prayerTime[0]?.isha
+                                                )[i].toString(),
+                                                listBackgroundWaktu[i]
+                                            )
+                                            gabunganListWaktuSholat.add(dataJadwalSholat)
+                                        }
+                                    }
+                                }
+
+                                null -> {
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(
+                                            text = "Mengambil lokasi...",
+                                            color = MaterialTheme.colorScheme.onBackground
+                                        )
+                                    }
+                                }
                             }
+                        }
+                    }
+                    Spacer(modifier = Modifier.size(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Card(
+                            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surfaceVariant),
+                            border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+                        ) {
+                            Text(
+                                modifier = Modifier
+                                    .padding(16.dp),
+                                textAlign = TextAlign.Center,
+                                text = dateFlow.value,
+                                style = MaterialTheme.typography.headlineLarge,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                fontFamily = FontFamily(Font(R.font.monda_regular))
+                            )
                         }
                     }
                 }
 
                 LazyVerticalGrid(
-                    modifier = Modifier.height(300.dp),
+                    modifier = Modifier.height(500.dp),
                     columns = GridCells.Fixed(2),
                     contentPadding = PaddingValues(16.dp)
                 ) {
@@ -353,49 +338,17 @@ fun WaktuSholat() {
                     }
                 }
             }
-            item {
-                Text(
-                    modifier = Modifier.padding(16.dp),
-                    text = """
-                    Hari Besar Islam 2023
-                    1444H-1445H
-                """.trimIndent(),
-                    fontFamily = FontFamily(Font(R.font.monda_regular)),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
-                )
-            }
-            items(gabunganListKalender) { item ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Image(
-                        painter = painterResource(id = item.gambarTanggal),
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp)
-                    )
-                    Spacer(modifier = Modifier.size(12.dp))
-                    Column {
-                        Text(
-                            text = item.namaHari,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Medium,
-                            fontFamily = FontFamily(Font(R.font.monda_regular))
-                        )
-                        Text(
-                            text = item.tanggalHari,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium,
-                            fontFamily = FontFamily(Font(R.font.monda_regular))
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.size(16.dp))
-            }
         }
+    }
+}
 
+private fun getTime() = flow {
+    while (true) {
+        val date = java.text.SimpleDateFormat(
+            "HH:mm:ss",
+            Locale.getDefault()
+        ).format(System.currentTimeMillis())
+        emit(date)
+        delay(1000)
     }
 }

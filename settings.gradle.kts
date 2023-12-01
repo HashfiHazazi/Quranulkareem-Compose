@@ -15,5 +15,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Qur'an App  PH1"
+rootProject.name = "Qur'anulkareem"
 include(":app")
